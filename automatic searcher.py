@@ -96,15 +96,21 @@ def normalizar_Analytische(texto):
 def normalizar_general(texto):
     # Aquí, personaliza la normalización para Fütterungshinweis
     texto = re.sub(r'\s+', ' ', texto).strip().lower()
+    texto = re.sub(r'[,.]', ' ', texto)
     return texto
    
 def encontrar_diferencias(texto_excel, texto_web):
-    # Usar difflib para obtener diferencias
-    diferencias = list(difflib.ndiff(texto_excel.split(), texto_web.split()))
+    diferencias = list(difflib.ndiff([texto_excel], [texto_web]))
     solo_en_excel = ' '.join([dif[2:] for dif in diferencias if dif.startswith('- ')])
     solo_en_web = ' '.join([dif[2:] for dif in diferencias if dif.startswith('+ ')])
 
-    return f"Solo en Excel: {solo_en_excel}\nSolo en Web: {solo_en_web}"
+    diferencias_str = ""
+    if solo_en_excel:
+        diferencias_str += f"Excel -->\n{solo_en_excel}\n"
+    if solo_en_web:
+        diferencias_str += f"Web -->\n{solo_en_web}\n"
+
+    return diferencias_str.strip()
     
 # Iterar sobre el DataFrame
 for index, row in df.iterrows():
@@ -149,7 +155,11 @@ for index, row in df.iterrows():
 # Preparar las discrepancias para escribir en el archivo
 discrepancias_para_archivo = {}
 for producto, discrepancias in productos_no_coincidentes:
-    discrepancias_detalle = '\n'.join([f"{col}: Excel -> {exc} | Web -> {web} | Diferencias: {dif}" for col, exc, web, dif in discrepancias])
+    discrepancias_detalle = '\n'.join([
+        f"{col}:\nExcel -->\n{exc}\nWeb -->\n{web}\nDiferencias:\n{dif}" 
+        if dif else f"{col}:\nExcel -->\n{exc}\nWeb -->\n{web}" 
+        for col, exc, web, dif in discrepancias
+    ])
     discrepancias_para_archivo[producto] = discrepancias_detalle
 
 def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="Anomalias.txt"):
