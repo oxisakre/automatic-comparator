@@ -78,27 +78,33 @@ ultimo_producto = None
 columnas_a_verificar = [
     'Fütterungshinweis', 'Fütterungsempfehlung', 'Zusammensetzung',
     'Ernährungsphysiologische Zusatzstofffe je kg', 'Technologische Zusatzstoffe je kg',
-    'Analytische Bestandteile und Gehalte'
+    'Analytische Bestandteile und Gehalte', 
 ]
 
-def normalizar_texto(texto):
-    # Eliminar espacios al principio y al final del texto
-    texto = texto.strip()
-    # Convertir a minúsculas para una comparación insensible a mayúsculas/minúsculas
-    texto = texto.lower()
-    # Reemplazar comas y puntos con espacios, luego normalizar múltiples espacios a uno solo
+def normalizar_Analytische(texto):
+    # Normalizar el formato de números y porcentajes
+    texto = re.sub(r'(\d)[.,](\d)', r'\1.\2', texto)  # Unificar formato decimal
+    texto = re.sub(r'(\d)\s*%', r'\1%', texto)  # Eliminar espacios antes de %
+    
+    # Eliminar puntuación irrelevante
     texto = re.sub(r'[,.]', ' ', texto)
-    texto = re.sub(r'\s+', ' ', texto)
+    
+    # Convertir múltiples espacios en uno solo
+    texto = re.sub(r'\s+', ' ', texto).strip().lower()
+    
     return texto
-        
+def normalizar_general(texto):
+    # Aquí, personaliza la normalización para Fütterungshinweis
+    texto = re.sub(r'\s+', ' ', texto).strip().lower()
+    return texto
    
 def encontrar_diferencias(texto_excel, texto_web):
-    # Diferencias usando difflib.ndiff para una comparación detallada
+    # Usar difflib para obtener diferencias
     diferencias = list(difflib.ndiff(texto_excel.split(), texto_web.split()))
-    diferencias_filtradas = [dif[2:] for dif in diferencias if dif.startswith('+ ') or dif.startswith('- ')]
-    # Convertir las diferencias filtradas en una cadena de texto para su presentación
-    texto_diferencias = ' '.join(diferencias_filtradas)
-    return texto_diferencias
+    solo_en_excel = ' '.join([dif[2:] for dif in diferencias if dif.startswith('- ')])
+    solo_en_web = ' '.join([dif[2:] for dif in diferencias if dif.startswith('+ ')])
+
+    return f"Solo en Excel: {solo_en_excel}\nSolo en Web: {solo_en_web}"
     
 # Iterar sobre el DataFrame
 for index, row in df.iterrows():
@@ -124,9 +130,13 @@ for index, row in df.iterrows():
             valor_web = descripciones_web.get(nombre_web_equivalente, '').strip()
             
             if valor_excel is not None and valor_web is not None:
-                # Normalizar los textos antes de compararlos
-                valor_excel_normalizado = normalizar_texto(valor_excel)
-                valor_web_normalizado = normalizar_texto(valor_web)
+                # Decidir qué normalización aplicar
+                if columna == 'Analytische Bestandteile und Gehalte' or columna == ('Ernährungsphysiologische Zusatzstofffe je kg' or 'Technologische Zusatzstoffe je kg'):
+                    valor_excel_normalizado = normalizar_Analytische(valor_excel)
+                    valor_web_normalizado = normalizar_Analytische(valor_web)
+                else:
+                    valor_excel_normalizado = normalizar_general(valor_excel)
+                    valor_web_normalizado = normalizar_general(valor_web)
                 
                 # Comparar los textos normalizados
                 if valor_excel_normalizado != valor_web_normalizado:
