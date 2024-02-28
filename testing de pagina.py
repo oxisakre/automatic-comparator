@@ -11,14 +11,14 @@ service = Service(ChromeDriverManager().install())
 driver = webdriver.Chrome(service=service)
 
 # Abrir la URL del producto
-driver.get("https://www.okapi-online.de/okapi-adrenacush-forte.html")
+driver.get("https://www.okapi-online.de/okapi-endoprotect.html")
 
 # Esperar a que el contenido dinámico se cargue
 time.sleep(5)  # Ajusta este tiempo según sea necesario
 
 # Extraer la descripción (ajusta el selector según tu caso)
 descripcion_element = WebDriverWait(driver, 10).until(
-    EC.visibility_of_element_located((By.CSS_SELECTOR, "div.own-description"))
+    EC.visibility_of_element_located((By.CSS_SELECTOR, "h3.overline-header"))
 )
 descripcion = descripcion_element.text
 

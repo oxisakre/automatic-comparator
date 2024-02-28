@@ -140,7 +140,7 @@ for producto, discrepancias in productos_no_coincidentes:
     discrepancias_detalle = '\n'.join([f"{col}: Excel -> {exc} | Web -> {web}" for col, exc, web in discrepancias])
     discrepancias_para_archivo[producto] = discrepancias_detalle
 
-def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="discrepancias.txt"):
+def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="Anomalias.txt"):
     ruta_escritorio = os.path.join(os.path.expanduser("~"), "Desktop")
     ruta_completa = os.path.join(ruta_escritorio, nombre_archivo)
     
@@ -151,6 +151,6 @@ def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="discrepancia
 # Llama a la función para escribir las discrepancias
 escribir_discrepancias_a_archivo(discrepancias_para_archivo)
 
-print("Las discrepancias han sido escritas al archivo 'discrepancias.txt' en el escritorio.")
+print("Las discrepancias han sido escritas al archivo 'Anomalias.txt' en el escritorio.")
             
 driver.quit()
