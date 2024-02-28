@@ -9,6 +9,7 @@ import pandas as pd
 import urllib.parse
 import re
 import os
+import difflib
 
 chrome_options = Options()
 chrome_options = webdriver.ChromeOptions()
@@ -99,6 +100,10 @@ def normalizar_texto(texto):
     texto = texto.replace(' ', '')
     
     return texto
+def resumir_diferencias(texto_excel, texto_web):
+    diferencias = list(difflib.ndiff([texto_excel], [texto_web]))
+    diferencias_filtradas = [dif[2:] for dif in diferencias if dif.startswith('- ') or dif.startswith('+ ')]
+    return ' | '.join(diferencias_filtradas)
 # Iterar sobre el DataFrame
 for index, row in df.iterrows():
     nombre_producto_actual = str(row['Artikelname Deutsch']).strip()
@@ -129,8 +134,9 @@ for index, row in df.iterrows():
                 
                 # Comparar los textos normalizados
                 if valor_excel_normalizado != valor_web_normalizado:
-                    discrepancias_producto.append((columna, valor_excel, valor_web))
-    
+                    resumen_diferencias = resumir_diferencias(valor_excel, valor_web)
+                    discrepancias_producto.append((columna, valor_excel, valor_web, resumen_diferencias))
+
     if discrepancias_producto:
         productos_no_coincidentes.append((nombre_producto, discrepancias_producto))
 
