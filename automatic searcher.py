@@ -84,26 +84,22 @@ columnas_a_verificar = [
 def normalizar_texto(texto):
     # Eliminar espacios al principio y al final del texto
     texto = texto.strip()
-    
-    # Reemplazar múltiples espacios con uno solo
+    # Convertir a minúsculas para una comparación insensible a mayúsculas/minúsculas
+    texto = texto.lower()
+    # Reemplazar comas y puntos con espacios, luego normalizar múltiples espacios a uno solo
+    texto = re.sub(r'[,.]', ' ', texto)
     texto = re.sub(r'\s+', ' ', texto)
-    frases_a_eliminar = [
-        "technologische zusatzstoffe je kg:",
-        "ernährungsphysiologische zusatzstoffe je kg:"
-    ]
-    for frase in frases_a_eliminar:
-        texto = texto.replace(frase, '')
-    # Opcional: eliminar saltos de línea
-    texto = texto.replace('\n', ' ')
-    texto = texto.replace(',', ' ')
-    texto = texto.replace('.', ' ')
-    texto = texto.replace(' ', '')
-    
     return texto
-def resumir_diferencias(texto_excel, texto_web):
-    diferencias = list(difflib.ndiff([texto_excel], [texto_web]))
-    diferencias_filtradas = [dif[2:] for dif in diferencias if dif.startswith('- ') or dif.startswith('+ ')]
-    return ' | '.join(diferencias_filtradas)
+        
+   
+def encontrar_diferencias(texto_excel, texto_web):
+    # Diferencias usando difflib.ndiff para una comparación detallada
+    diferencias = list(difflib.ndiff(texto_excel.split(), texto_web.split()))
+    diferencias_filtradas = [dif[2:] for dif in diferencias if dif.startswith('+ ') or dif.startswith('- ')]
+    # Convertir las diferencias filtradas en una cadena de texto para su presentación
+    texto_diferencias = ' '.join(diferencias_filtradas)
+    return texto_diferencias
+    
 # Iterar sobre el DataFrame
 for index, row in df.iterrows():
     nombre_producto_actual = str(row['Artikelname Deutsch']).strip()
@@ -134,7 +130,7 @@ for index, row in df.iterrows():
                 
                 # Comparar los textos normalizados
                 if valor_excel_normalizado != valor_web_normalizado:
-                    resumen_diferencias = resumir_diferencias(valor_excel, valor_web)
+                    resumen_diferencias = encontrar_diferencias(valor_excel_normalizado, valor_web_normalizado)
                     discrepancias_producto.append((columna, valor_excel, valor_web, resumen_diferencias))
 
     if discrepancias_producto:
@@ -143,7 +139,7 @@ for index, row in df.iterrows():
 # Preparar las discrepancias para escribir en el archivo
 discrepancias_para_archivo = {}
 for producto, discrepancias in productos_no_coincidentes:
-    discrepancias_detalle = '\n'.join([f"{col}: Excel -> {exc} | Web -> {web}" for col, exc, web in discrepancias])
+    discrepancias_detalle = '\n'.join([f"{col}: Excel -> {exc} | Web -> {web} | Diferencias: {dif}" for col, exc, web, dif in discrepancias])
     discrepancias_para_archivo[producto] = discrepancias_detalle
 
 def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="Anomalias.txt"):
