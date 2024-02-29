@@ -11,8 +11,22 @@ import urllib.parse
 import re
 import os
 import difflib
-import time
+import tkinter as tk
+from tkinter import filedialog
 
+def seleccionar_archivo_excel():
+    root = tk.Tk()
+    root.withdraw()  # Ocultar la ventana principal de Tk
+    root.update() # Procesar eventos pendientes y asegurarse de que se oculta la ventana
+    # Mostrar el cuadro de diálogo para que el usuario elija el archivo
+    file_path = filedialog.askopenfilename(
+        title="Seleccione el archivo Excel",
+        filetypes=[("Archivos Excel", "*.xlsx")]
+    )
+
+    root.destroy()  # Cerrar la ventana de Tkinter
+
+    return file_path
 def buscar_un_producto():
     nombre_del_producto = input("Ingrese el nombre del producto: ")
     service = ChromeService(ChromeDriverManager().install())
@@ -57,6 +71,7 @@ def buscar_un_producto():
     return informacion_producto
 
 def leer_todos_los_productos():
+    
     chrome_options = Options()
     chrome_options = webdriver.ChromeOptions()
     service = ChromeService(ChromeDriverManager().install())
@@ -116,8 +131,12 @@ def leer_todos_los_productos():
         except Exception as e:
             print(f"Error al extraer de {url}: {e}")
         return {}
+    
 
-    file_path = r"C:\Users\Super Leo\Downloads\Masterliste_Ubersetzungen_19.02.24.xlsx"
+    file_path = seleccionar_archivo_excel()
+    if not file_path:
+        print("No se seleccionó ningún archivo.")
+        return
     df = pd.read_excel(file_path)
     productos_no_coincidentes = []
     ultimo_producto = None 
@@ -234,6 +253,7 @@ def leer_todos_los_productos():
     print("Las discrepancias han sido escritas al archivo 'Anomalias.txt' en el escritorio.")   
 
 def main():
+    
     while True:
         print("Elige una opción:")
         print("1. Ver la descripción de un producto")
