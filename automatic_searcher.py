@@ -79,8 +79,8 @@ def leer_todos_los_productos():
     # Mapeo de nombres de Excel a nombres en la página web
     mapeo_nombres = {
         'Fütterungshinweis': 'Fütterungshinweis',
-        'Fütterungsempfehlung': 'Fütterungsempfehlung',
-        'Zusammensetzung': 'Zusammensetzung',
+        'Fütterungsempfehlung ': 'Fütterungsempfehlung',
+        'Zusammensetzung ': 'Zusammensetzung',
         'Ernährungsphysiologische Zusatzstofffe je kg': 'Zusatzstoffe',
         'Technologische Zusatzstoffe je kg': 'Zusatzstoffe',  # Ajusta según la variación encontrada
         'Analytische Bestandteile und Gehalte': 'Analytische Bestandteile und Gehalte'
@@ -141,7 +141,7 @@ def leer_todos_los_productos():
     productos_no_coincidentes = []
     ultimo_producto = None 
     columnas_a_verificar = [
-        'Fütterungshinweis', 'Fütterungsempfehlung', 'Zusammensetzung',
+        'Fütterungshinweis', 'Fütterungsempfehlung ', 'Zusammensetzung ',
         'Ernährungsphysiologische Zusatzstofffe je kg', 'Technologische Zusatzstoffe je kg',
         'Analytische Bestandteile und Gehalte', 
     ]
@@ -159,9 +159,20 @@ def leer_todos_los_productos():
         
         return texto
     def normalizar_general(texto):
-        # Aquí, personaliza la normalización para Fütterungshinweis
-        texto = re.sub(r'\s+', ' ', texto).strip().lower()
+        # Convertir a minúsculas y eliminar espacios extra al principio y al final
+        texto = texto.strip().lower()
+        
+        # Unificar formato de números con unidades o porcentajes (eliminando espacio antes de %, g, mg, etc.)
+        texto = re.sub(r'(\d)\s*%', r'\1%', texto)  # De "15 %" a "15%"
+        texto = re.sub(r'(\d)\s*(g|mg|kg|µg)', r'\1\2', texto)  # De "15 g" a "15g"
+        
+        # Eliminar puntuación irrelevante y convertir comas a puntos para decimales
         texto = re.sub(r'[,.]', ' ', texto)
+        texto = re.sub(r'(\d)\s*\.\s*(\d)', r'\1.\2', texto)  # Corrige espacios alrededor de puntos decimales si existen
+        
+        # Convertir múltiples espacios a uno solo
+        texto = re.sub(r'\s+', ' ', texto)
+        
         return texto
     
     
@@ -169,24 +180,28 @@ def leer_todos_los_productos():
         texto_excel_palabras = texto_excel.split()
         texto_web_palabras = texto_web.split()
         
-        # Crear un objeto Differ y calcular las diferencias
         d = difflib.Differ()
         diferencias = list(d.compare(texto_excel_palabras, texto_web_palabras))
         
-        # Filtrar las diferencias, manteniendo solo las líneas que tienen cambios
-        diferencias_filtradas_excel = [line[2:] for line in diferencias if line.startswith('- ')]
-        diferencias_filtradas_web = [line[2:] for line in diferencias if line.startswith('+ ')]
+        diferencias_filtradas_excel = []
+        diferencias_filtradas_web = []
         
-        # Unir las diferencias filtradas en cadenas de texto para devolverlas
+        for line in diferencias:
+            if line.startswith('- '):
+                diferencias_filtradas_excel.append(line[2:])
+            elif line.startswith('+ '):
+                diferencias_filtradas_web.append(line[2:])
+        
         diferencias_texto_excel = ' '.join(diferencias_filtradas_excel)
         diferencias_texto_web = ' '.join(diferencias_filtradas_web)
         
-        # Devolver las diferencias en formato legible
         resultado = ""
-        if diferencias_texto_excel:
-            resultado += f"Excel -->\n{diferencias_texto_excel}\n"
-        if diferencias_texto_web:
-            resultado += f"Web -->\n{diferencias_texto_web}\n"
+        if diferencias_texto_excel or diferencias_texto_web:
+            resultado += f"Diferencias específicas:\n"
+            if diferencias_texto_excel:
+                resultado += f"Excel ---> {diferencias_texto_excel}\n"
+            if diferencias_texto_web:
+                resultado += f"Web ---> {diferencias_texto_web}\n"
         return resultado.strip()
             
     # Iterar sobre el DataFrame
@@ -233,11 +248,11 @@ def leer_todos_los_productos():
     discrepancias_para_archivo = {}
     for producto, discrepancias in productos_no_coincidentes:
         discrepancias_detalle = '\n'.join([
-            f"{col}:\nExcel -->\n{exc}\nWeb -->\n{web}\nDiferencias:\n{dif}" 
-            if dif else f"{col}:\nExcel -->\n{exc}\nWeb -->\n{web}" 
-            for col, exc, web, dif in discrepancias
+            f"{col}:\n{dif}"  
+            for col, exc, web, dif in discrepancias if dif  #incluir solo los elementos con diferencias
         ])
         discrepancias_para_archivo[producto] = discrepancias_detalle
+        
 
     def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="Anomalias.txt"):
         ruta_escritorio = os.path.join(os.path.expanduser("~"), "Desktop")
@@ -245,7 +260,7 @@ def leer_todos_los_productos():
 
         with open(ruta_completa, "w", encoding="utf-8") as archivo:
             for producto, detalle in discrepancias.items():
-                archivo.write(f"Producto: {producto}\nDiscrepancias:\n{detalle}\n\n")
+                archivo.write(f"Producto: {producto}\n{detalle}\n\n")
 
     # Llama a la función para escribir las discrepancias
     escribir_discrepancias_a_archivo(discrepancias_para_archivo)
