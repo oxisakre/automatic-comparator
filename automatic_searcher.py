@@ -192,17 +192,18 @@ def leer_todos_los_productos():
             elif line.startswith('+ '):
                 diferencias_filtradas_web.append(line[2:])
         
-        diferencias_texto_excel = ' '.join(diferencias_filtradas_excel)
-        diferencias_texto_web = ' '.join(diferencias_filtradas_web)
-        
-        resultado = ""
-        if diferencias_texto_excel or diferencias_texto_web:
-            resultado += f"Diferencias específicas:\n"
+        if not diferencias_filtradas_excel and not diferencias_filtradas_web:
+            return "No hay diferencias"
+        else:
+            diferencias_texto_excel = ' '.join(diferencias_filtradas_excel)
+            diferencias_texto_web = ' '.join(diferencias_filtradas_web)
+            
+            resultado = ""
             if diferencias_texto_excel:
-                resultado += f"Excel ---> {diferencias_texto_excel}\n"
+                resultado += f"En Excel: {diferencias_texto_excel}\n"
             if diferencias_texto_web:
-                resultado += f"Web ---> {diferencias_texto_web}\n"
-        return resultado.strip()
+                resultado += f"En Web: {diferencias_texto_web}\n"
+            return resultado.strip()
             
     # Iterar sobre el DataFrame
     for index, row in df.iterrows():
@@ -279,6 +280,7 @@ def main():
         if opcion == '1':
             buscar_un_producto()
         elif opcion == '2':
+            print('Cargando... Estaria bueno que esperes un poquito')
             leer_todos_los_productos()
         elif opcion == '3':
             break
