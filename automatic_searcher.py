@@ -82,6 +82,7 @@ def leer_todos_los_productos():
         'Fütterungsempfehlung ': 'Fütterungsempfehlung',
         'Zusammensetzung ': 'Zusammensetzung',
         'Ernährungsphysiologische Zusatzstofffe je kg': 'Zusatzstoffe',
+        'Ernährungsphysiologische Zusatzstoffe je kg': 'Zusatzstoffe',
         'Technologische Zusatzstoffe je kg': 'Zusatzstoffe',  # Ajusta según la variación encontrada
         'Analytische Bestandteile und Gehalte': 'Analytische Bestandteile und Gehalte'
     }
@@ -206,54 +207,58 @@ def leer_todos_los_productos():
             return resultado.strip()
             
     # Iterar sobre el DataFrame
+    productos_no_coincidentes = []
+    ultimo_producto = None 
     for index, row in df.iterrows():
         nombre_producto_actual = str(row['Artikelname Deutsch']).strip()
-
-        # Verificar si el producto actual es el mismo que el último procesado
         if nombre_producto_actual == ultimo_producto:
-            continue  # Saltear este producto
-
-        # Actualizar el nombre del último producto procesado
+            continue
         ultimo_producto = nombre_producto_actual
 
-        # Aquí empiezas a trabajar con el producto actual, ya que es diferente al anterior
         nombre_producto = row['Artikelname Deutsch']
         url_producto = generar_url(nombre_producto)
         descripciones_web = extraer_descripciones(url_producto, driver)
         discrepancias_producto = []
+        hay_diferencias = False
 
         for columna in columnas_a_verificar:
             if columna in df.columns:
                 valor_excel = str(row[columna]).strip() if pd.notnull(row[columna]) else None
-                nombre_web_equivalente = mapeo_nombres.get(columna, columna)  # Usar mapeo o el mismo nombre si no hay mapeo
+                nombre_web_equivalente = mapeo_nombres.get(columna, columna)
                 valor_web = descripciones_web.get(nombre_web_equivalente, '').strip()
-                
-                if valor_excel is not None and valor_web is not None:
-                    # Decidir qué normalización aplicar
-                    if columna == 'Analytische Bestandteile und Gehalte' or columna == ('Ernährungsphysiologische Zusatzstofffe je kg' or 'Technologische Zusatzstoffe je kg'):
-                        valor_excel_normalizado = normalizar_Analytische(valor_excel)
-                        valor_web_normalizado = normalizar_Analytische(valor_web)
-                    else:
-                        valor_excel_normalizado = normalizar_general(valor_excel)
-                        valor_web_normalizado = normalizar_general(valor_web)
-                    
-                    # Comparar los textos normalizados
-                    if valor_excel_normalizado != valor_web_normalizado:
-                        resumen_diferencias = encontrar_diferencias(valor_excel_normalizado, valor_web_normalizado)
-                        discrepancias_producto.append((columna, valor_excel, valor_web, resumen_diferencias))
 
-        if discrepancias_producto:
+                if columna in ['Analytische Bestandteile und Gehalte', 'Ernährungsphysiologische Zusatzstofffe je kg', 'Technologische Zusatzstoffe je kg']:
+                    valor_excel_normalizado = normalizar_Analytische(valor_excel) if valor_excel else ""
+                    valor_web_normalizado = normalizar_Analytische(valor_web) if valor_web else ""
+                else:
+                    valor_excel_normalizado = normalizar_general(valor_excel) if valor_excel else ""
+                    valor_web_normalizado = normalizar_general(valor_web) if valor_web else ""
+
+                resumen_diferencias = encontrar_diferencias(valor_excel_normalizado, valor_web_normalizado)
+                if resumen_diferencias != "No hay diferencias":
+                    hay_diferencias = True
+                    discrepancias_producto.append((columna, resumen_diferencias))
+
+        if not hay_diferencias:
+            productos_no_coincidentes.append((nombre_producto, [("General", "No hay diferencias")]))
+        else:
             productos_no_coincidentes.append((nombre_producto, discrepancias_producto))
 
-    # Preparar las discrepancias para escribir en el archivo
     discrepancias_para_archivo = {}
     for producto, discrepancias in productos_no_coincidentes:
-        discrepancias_detalle = '\n'.join([
-            f"{col}:\n{dif}"  
-            for col, exc, web, dif in discrepancias if dif  #incluir solo los elementos con diferencias
-        ])
-        discrepancias_para_archivo[producto] = discrepancias_detalle
+        discrepancias_detalle = []
+        for dis in discrepancias:
+            # Suponiendo que dis es una tupla de la forma (columna, resumen_diferencias)
+            col, dif = dis
+            if col == "General":
+                discrepancias_detalle.append(dif)  # "No hay diferencias"
+            else:
+                # Ajusta aquí el formato para incluir un salto de línea antes de "En Excel:" y "En Web:"
+                partes_dif = dif.split('\n')  # Esto asume que dif ya incluye "En Excel:" y "En Web:"
+                dif_formateada = "\n".join(partes_dif)  # Re-construye la discrepancia con los saltos de línea
+                discrepancias_detalle.append(f"{col}:\n{dif_formateada}")
         
+        discrepancias_para_archivo[producto] = '\n'.join(discrepancias_detalle)
 
     def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="Anomalias.txt"):
         ruta_escritorio = os.path.join(os.path.expanduser("~"), "Desktop")
