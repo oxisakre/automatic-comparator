@@ -249,12 +249,12 @@ def leer_todos_los_productos():
                 valor_web = descripciones_web.get(mapeo_nombres.get(columna, columna), '').strip()
 
                 # Aplicar la normalización específica según la columna
+                valor_excel_normalizado = normalizar_general(valor_excel)
+                valor_web_normalizado = normalizar_general(valor_web)
+
                 if columna in ['Analytische Bestandteile und Gehalte', 'Ernährungsphysiologische Zusatzstofffe je kg', 'Technologische Zusatzstoffe je kg', 'Ernährungsphysiologische Zusatzstoffe je kg']:
                     valor_excel_normalizado = normalizar_Analytische(valor_excel)
                     valor_web_normalizado = normalizar_Analytische(valor_web)
-                else:
-                    valor_excel_normalizado = normalizar_general(valor_excel)
-                    valor_web_normalizado = normalizar_general(valor_web)
 
                 resumen_diferencias = encontrar_diferencias(valor_excel_normalizado, valor_web_normalizado)
                 if resumen_diferencias != "No hay diferencias":
@@ -262,10 +262,10 @@ def leer_todos_los_productos():
                     discrepancias_producto.append((columna, resumen_diferencias))
 
         if not hay_diferencias:
-    # Si no hay diferencias, agregamos una tupla con un valor para 'General' y otro para el mensaje
+            # Si no hay diferencias, agregamos una tupla con el nombre del producto y un mensaje general
             productos_no_coincidentes.append((nombre_producto, [("General", "No hay diferencias")]))
         else:
-            # Si hay diferencias, agregamos las discrepancias que contienen tuplas de dos valores
+            # Si hay diferencias, agregamos una tupla con el nombre del producto y la lista de discrepancias
             productos_no_coincidentes.append((nombre_producto, discrepancias_producto))
 
     discrepancias_para_archivo = {}
@@ -287,46 +287,25 @@ def leer_todos_los_productos():
     def escribir_discrepancias_a_excel(productos_no_coincidentes, nombre_archivo="Anomalias.xlsx"):
     # Lista para almacenar los datos antes de convertirlos a DataFrame
         data = []
-        
-        # Iterar sobre las discrepancias recopiladas para cada producto
-        for producto_discrepancias in productos_no_coincidentes:
-            # Asegúrate de que cada producto_discrepancias tenga exactamente dos elementos
-            if len(producto_discrepancias) == 2:
-                producto, discrepancias = producto_discrepancias
-            else:
-                print(f"Error: se esperaban 2 valores para '{producto_discrepancias}', pero se recibieron {len(producto_discrepancias)}.")
-                continue
-
-            # Crear un diccionario para los datos del producto actual
+        for producto, discrepancias in productos_no_coincidentes:
             datos_producto = {'Producto': producto}
-            
-            # Inicializar todas las columnas con 'No hay diferencias'
             for columna in columnas_a_verificar:
-                datos_producto[columna] = "No hay diferencias"
-            
-            # Comprobar si hay discrepancias y actualizar el diccionario con los datos reales
-            if discrepancias != "No hay diferencias":
-                for col, dif in discrepancias:
-                    datos_producto[col] = dif
-
-            # Agregar el diccionario al conjunto de datos para el DataFrame
+                datos_producto[columna] = "No hay diferencias"  # Inicializa todas las columnas con 'No hay diferencias'
+            for columna, discrepancia in discrepancias:
+                if columna == "General" and discrepancia == "No hay diferencias":
+                    for col in columnas_a_verificar:
+                        datos_producto[col] = "No hay diferencias"  # Establece todas las columnas a 'No hay diferencias'
+                else:
+                    datos_producto[columna] = discrepancia  # Actualiza la columna específica con su discrepancia
             data.append(datos_producto)
 
-        # Crear el DataFrame a partir de la lista de datos
+        # Convierte la lista de datos a un DataFrame
         df = pd.DataFrame(data)
-        
-        # Verificar si hay datos para escribir en el Excel
-        if df.empty:
-            print("No hay datos para escribir en el archivo Excel.")
-            return
 
-        # Definir la ruta completa para el archivo Excel
+        # Escribe el DataFrame a un archivo Excel
         ruta_completa = os.path.join(os.path.expanduser("~"), "Desktop", nombre_archivo)
-        
-        # Escribir el DataFrame a un archivo Excel
         df.to_excel(ruta_completa, index=False)
-        
-        print(f"Las discrepancias han sido escritas al archivo '{nombre_archivo}' en el escritorio.")
+        print(f"El archivo {nombre_archivo} ha sido guardado en el escritorio.")
             # Llama a la función para escribir las discrepancias
     escribir_discrepancias_a_excel(discrepancias_para_archivo)
 
