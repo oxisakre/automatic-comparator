@@ -13,6 +13,7 @@ import os
 import difflib
 import tkinter as tk
 from tkinter import filedialog
+import pandas as pd
 
 def seleccionar_archivo_excel():
     root = tk.Tk()
@@ -119,15 +120,29 @@ def leer_todos_los_productos():
     def extraer_descripciones(url, driver):
         try:
             driver.get(url)
-            # Espera hasta que se cargue el contenido dinámico, ajusta los selectores y tiempos según sea necesario
             WebDriverWait(driver, 10).until(
                 EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'h3.overline-header'))
             )
             descripciones = {}
             for h3 in driver.find_elements(By.CSS_SELECTOR, 'h3.overline-header'):
                 key = h3.text.strip()
-                value = h3.find_element(By.XPATH, 'following-sibling::p').text.strip() if h3.find_element(By.XPATH, 'following-sibling::p') else ''
-                descripciones[key] = value
+                # Busca el párrafo siguiente para cada encabezado h3
+                p_element = h3.find_element(By.XPATH, 'following-sibling::p')
+                value = p_element.text.strip() if p_element else ''
+
+                # Si el encabezado es 'Zusatzstoffe', debes buscar ambos tipos dentro del texto
+                if 'Zusatzstoffe' in key:
+                    # Divide el valor por líneas nuevas y procesa cada línea por separado
+                    for line in value.split('\n'):
+                        if "Ernährungsphysiologische Zusatzstoffe je kg:" in line:
+                            # Asigna el valor a la clave correspondiente sin el título
+                            descripciones['Ernährungsphysiologische Zusatzstofffe je kg'] = line.split("Ernährungsphysiologische Zusatzstoffe je kg:")[1].strip()
+                        elif "Technologische Zusatzstoffe je kg:" in line:
+                            # Asigna el valor a la clave correspondiente sin el título
+                            descripciones['Technologische Zusatzstoffe je kg'] = line.split("Technologische Zusatzstoffe je kg:")[1].strip()
+                else:
+                    descripciones[key] = value
+
             return descripciones
         except Exception as e:
             print(f"Error al extraer de {url}: {e}")
@@ -147,18 +162,26 @@ def leer_todos_los_productos():
         'Analytische Bestandteile und Gehalte', 
     ]
 
+    
     def normalizar_Analytische(texto):
-        # Normalizar el formato de números y porcentajes
-        texto = re.sub(r'(\d)[.,](\d)', r'\1.\2', texto)  # Unificar formato decimal
-        texto = re.sub(r'(\d)\s*%', r'\1%', texto)  # Eliminar espacios antes de %
-        
-        # Eliminar puntuación irrelevante
-        texto = re.sub(r'[,.]', ' ', texto)
-        
-        # Convertir múltiples espacios en uno solo
-        texto = re.sub(r'\s+', ' ', texto).strip().lower()
-        
+        # Eliminar saltos de línea y retornos de carro
+        texto = texto.replace('\n', ' ').replace('\r', ' ')
+
+        # Unificar formato decimal
+        texto = re.sub(r'(\d)[.,](\d)', r'\1.\2', texto)
+
+        # Unificar espacios alrededor de las unidades y porcentajes
+        texto = re.sub(r'(\d)\s*%', r'\1%', texto)  # "15 %" a "15%"
+        texto = re.sub(r'(\d)\s*(mg|g|kg|µg)\b', r'\1\2', texto)  # "100 mg" a "100mg"
+
+        # Convertir a minúsculas y eliminar puntuación irrelevante
+        texto = re.sub(r'[,.]', ' ', texto).lower()
+
+        # Eliminar espacios extras
+        texto = re.sub(r'\s+', ' ', texto).strip()
+
         return texto
+
     def normalizar_general(texto):
         # Convertir a minúsculas y eliminar espacios extra al principio y al final
         texto = texto.strip().lower()
@@ -173,7 +196,6 @@ def leer_todos_los_productos():
         
         # Convertir múltiples espacios a uno solo
         texto = re.sub(r'\s+', ' ', texto)
-        
         return texto
     
     
@@ -223,16 +245,16 @@ def leer_todos_los_productos():
 
         for columna in columnas_a_verificar:
             if columna in df.columns:
-                valor_excel = str(row[columna]).strip() if pd.notnull(row[columna]) else None
-                nombre_web_equivalente = mapeo_nombres.get(columna, columna)
-                valor_web = descripciones_web.get(nombre_web_equivalente, '').strip()
+                valor_excel = str(row[columna]).strip() if pd.notnull(row[columna]) else ""
+                valor_web = descripciones_web.get(mapeo_nombres.get(columna, columna), '').strip()
 
-                if columna in ['Analytische Bestandteile und Gehalte', 'Ernährungsphysiologische Zusatzstofffe je kg', 'Technologische Zusatzstoffe je kg']:
-                    valor_excel_normalizado = normalizar_Analytische(valor_excel) if valor_excel else ""
-                    valor_web_normalizado = normalizar_Analytische(valor_web) if valor_web else ""
+                # Aplicar la normalización específica según la columna
+                if columna in ['Analytische Bestandteile und Gehalte', 'Ernährungsphysiologische Zusatzstofffe je kg', 'Technologische Zusatzstoffe je kg', 'Ernährungsphysiologische Zusatzstoffe je kg']:
+                    valor_excel_normalizado = normalizar_Analytische(valor_excel)
+                    valor_web_normalizado = normalizar_Analytische(valor_web)
                 else:
-                    valor_excel_normalizado = normalizar_general(valor_excel) if valor_excel else ""
-                    valor_web_normalizado = normalizar_general(valor_web) if valor_web else ""
+                    valor_excel_normalizado = normalizar_general(valor_excel)
+                    valor_web_normalizado = normalizar_general(valor_web)
 
                 resumen_diferencias = encontrar_diferencias(valor_excel_normalizado, valor_web_normalizado)
                 if resumen_diferencias != "No hay diferencias":
@@ -240,8 +262,10 @@ def leer_todos_los_productos():
                     discrepancias_producto.append((columna, resumen_diferencias))
 
         if not hay_diferencias:
+    # Si no hay diferencias, agregamos una tupla con un valor para 'General' y otro para el mensaje
             productos_no_coincidentes.append((nombre_producto, [("General", "No hay diferencias")]))
         else:
+            # Si hay diferencias, agregamos las discrepancias que contienen tuplas de dos valores
             productos_no_coincidentes.append((nombre_producto, discrepancias_producto))
 
     discrepancias_para_archivo = {}
@@ -260,18 +284,53 @@ def leer_todos_los_productos():
         
         discrepancias_para_archivo[producto] = '\n'.join(discrepancias_detalle)
 
-    def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="Anomalias.txt"):
-        ruta_escritorio = os.path.join(os.path.expanduser("~"), "Desktop")
-        ruta_completa = os.path.join(ruta_escritorio, nombre_archivo)
+    def escribir_discrepancias_a_excel(productos_no_coincidentes, nombre_archivo="Anomalias.xlsx"):
+    # Lista para almacenar los datos antes de convertirlos a DataFrame
+        data = []
+        
+        # Iterar sobre las discrepancias recopiladas para cada producto
+        for producto_discrepancias in productos_no_coincidentes:
+            # Asegúrate de que cada producto_discrepancias tenga exactamente dos elementos
+            if len(producto_discrepancias) == 2:
+                producto, discrepancias = producto_discrepancias
+            else:
+                print(f"Error: se esperaban 2 valores para '{producto_discrepancias}', pero se recibieron {len(producto_discrepancias)}.")
+                continue
 
-        with open(ruta_completa, "w", encoding="utf-8") as archivo:
-            for producto, detalle in discrepancias.items():
-                archivo.write(f"Producto: {producto}\n{detalle}\n\n")
+            # Crear un diccionario para los datos del producto actual
+            datos_producto = {'Producto': producto}
+            
+            # Inicializar todas las columnas con 'No hay diferencias'
+            for columna in columnas_a_verificar:
+                datos_producto[columna] = "No hay diferencias"
+            
+            # Comprobar si hay discrepancias y actualizar el diccionario con los datos reales
+            if discrepancias != "No hay diferencias":
+                for col, dif in discrepancias:
+                    datos_producto[col] = dif
 
-    # Llama a la función para escribir las discrepancias
-    escribir_discrepancias_a_archivo(discrepancias_para_archivo)
+            # Agregar el diccionario al conjunto de datos para el DataFrame
+            data.append(datos_producto)
 
-    print("Las discrepancias han sido escritas al archivo 'Anomalias.txt' en el escritorio.")   
+        # Crear el DataFrame a partir de la lista de datos
+        df = pd.DataFrame(data)
+        
+        # Verificar si hay datos para escribir en el Excel
+        if df.empty:
+            print("No hay datos para escribir en el archivo Excel.")
+            return
+
+        # Definir la ruta completa para el archivo Excel
+        ruta_completa = os.path.join(os.path.expanduser("~"), "Desktop", nombre_archivo)
+        
+        # Escribir el DataFrame a un archivo Excel
+        df.to_excel(ruta_completa, index=False)
+        
+        print(f"Las discrepancias han sido escritas al archivo '{nombre_archivo}' en el escritorio.")
+            # Llama a la función para escribir las discrepancias
+    escribir_discrepancias_a_excel(discrepancias_para_archivo)
+
+    
 
 def main():
     
