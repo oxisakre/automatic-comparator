@@ -184,9 +184,9 @@ def leer_todos_los_productos():
             
             resultado = ""
             if diferencias_texto_excel:
-                resultado += f"En Excel: {diferencias_texto_excel}\n"
+                resultado += f"In Excel: {diferencias_texto_excel}\n"
             if diferencias_texto_web:
-                resultado += f"En Web: {diferencias_texto_web}\n"
+                resultado += f"In Web: {diferencias_texto_web}\n"
             return resultado.strip()
 
     # Iterar sobre el DataFrame
@@ -281,7 +281,7 @@ def leer_todos_los_productos():
         discrepancias_para_archivo[producto] = '\n'.join(discrepancias_detalle)
    
 
-    def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="Anomalias.txt"):
+    def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="Anomalies.txt"):
         ruta_escritorio = os.path.join(os.path.expanduser("~"), "Desktop")
         ruta_completa = os.path.join(ruta_escritorio, nombre_archivo)
         with open(ruta_completa, "w", encoding="utf-8") as archivo:
@@ -289,23 +289,23 @@ def leer_todos_los_productos():
                 archivo.write(f"Producto: {producto}\n{detalle}\n\n")
     # Llama a la función para escribir las discrepancias
     escribir_discrepancias_a_archivo(discrepancias_para_archivo)
-    print("Las discrepancias han sido escritas al archivo 'Anomalias.txt' en el escritorio.")   
+    print("The discrepancies have been written to the 'Anomalies.txt' file on the desktop.")   
 def main():
     
     while True:
-        print("Elige una opción:")
-        print("1. Ver la descripción de un producto")
-        print("2. Leer todos los productos")
-        print("3. Salir")
-        opcion = input("Introduce el número de la opción deseada: ")
+        print("Choose an option:")
+        print("1. View a product description")
+        print("2. Read all products")
+        print("3. Exit")
+        opcion = input("Enter the number of the desired option:")
         if opcion == '1':
             buscar_un_producto()
         elif opcion == '2':
-            print('Cargando... Estaria bueno que esperes un poquito')
+            print('The program is running... Please wait')
             leer_todos_los_productos()
         elif opcion == '3':
             break
         else:
-            print("Opción no válida, por favor intenta de nuevo.")
+            print("Invalid option, please try again.")
 if __name__ == "__main__":
     main()
