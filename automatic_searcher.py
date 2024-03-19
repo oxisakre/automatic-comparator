@@ -20,13 +20,13 @@ def seleccionar_archivo_excel():
     root.update() # Procesar eventos pendientes y asegurarse de que se oculta la ventana
     # Mostrar el cuadro de diálogo para que el usuario elija el archivo
     file_path = filedialog.askopenfilename(
-        title="Seleccione el archivo Excel",
-        filetypes=[("Archivos Excel", "*.xlsx")]
+        title="Select the Excel file",
+        filetypes=[("Excel files", "*.xlsx")]
     )
     root.destroy()  # Cerrar la ventana de Tkinter
     return file_path
 def buscar_un_producto():
-    nombre_del_producto = input("Ingrese el nombre del producto: ")
+    nombre_del_producto = input("Enter the product name: ")
     service = ChromeService(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service)
     
@@ -55,7 +55,7 @@ def buscar_un_producto():
         for key, value in informacion_producto.items():
             print(f"{key}: {value}")
     except TimeoutException as e:
-        print("Se agotó el tiempo de espera al buscar el producto:", e)
+        print("You timed out when searching for the product:", e)
     finally:
         driver.quit()
     return informacion_producto
@@ -70,7 +70,6 @@ def leer_todos_los_productos():
         'Fütterungshinweis': 'Fütterungshinweis',
         'Fütterungsempfehlung ': 'Fütterungsempfehlung',
         'Zusammensetzung ': 'Zusammensetzung',
-        'Ernährungsphysiologische Zusatzstofffe je kg': 'Zusatzstoffe',
         'Ernährungsphysiologische Zusatzstoffe je kg': 'Zusatzstoffe',
         'Technologische Zusatzstoffe je kg': 'Zusatzstoffe',  # Ajusta según la variación encontrada
         'Analytische Bestandteile und Gehalte': 'Analytische Bestandteile und Gehalte'
@@ -116,19 +115,19 @@ def leer_todos_los_productos():
                 descripciones[key] = value
             return descripciones
         except Exception as e:
-            print(f"Error al extraer de {url}: {e}")
+            print(f"Error extracting from {url}: {e}")
         return {}
     
     file_path = seleccionar_archivo_excel()
     if not file_path:
-        print("No se seleccionó ningún archivo.")
+        print("No file was selected.")
         return
     df = pd.read_excel(file_path)
     productos_no_coincidentes = []
     ultimo_producto = None 
     columnas_a_verificar = [
         'Fütterungshinweis', 'Fütterungsempfehlung ', 'Zusammensetzung ',
-        'Ernährungsphysiologische Zusatzstofffe je kg', 'Technologische Zusatzstoffe je kg',
+        'Ernährungsphysiologische Zusatzstoffe je kg', 'Technologische Zusatzstoffe je kg',
         'Analytische Bestandteile und Gehalte', 
     ]
     def normalizar_Analytische(texto):
@@ -178,7 +177,7 @@ def leer_todos_los_productos():
                 diferencias_filtradas_web.append(line[2:])
         
         if not diferencias_filtradas_excel and not diferencias_filtradas_web:
-            return "No hay diferencias"
+            return "There are no differences"
         else:
             diferencias_texto_excel = ' '.join(diferencias_filtradas_excel)
             diferencias_texto_web = ' '.join(diferencias_filtradas_web)
@@ -220,7 +219,7 @@ def leer_todos_los_productos():
 
                 if valor_excel is not None and valor_web is not None:
                     # Decidir qué normalización aplicar
-                    if columna == 'Analytische Bestandteile und Gehalte' or columna == ('Ernährungsphysiologische Zusatzstofffe je kg' or 'Technologische Zusatzstoffe je kg'):
+                    if columna == 'Analytische Bestandteile und Gehalte' or columna == ('Ernährungsphysiologische Zusatzstoffe je kg' or 'Technologische Zusatzstoffe je kg'):
                         valor_excel_normalizado = normalizar_Analytische(valor_excel)
                         valor_web_normalizado = normalizar_Analytische(valor_web)
                     else:
@@ -233,7 +232,7 @@ def leer_todos_los_productos():
                         discrepancias_producto.append((columna, valor_excel, valor_web, resumen_diferencias))
 
         if discrepancias_producto:
-                if columna in ['Analytische Bestandteile und Gehalte', 'Ernährungsphysiologische Zusatzstofffe je kg', 'Technologische Zusatzstoffe je kg']:
+                if columna in ['Analytische Bestandteile und Gehalte', 'Ernährungsphysiologische Zusatzstoffe je kg', 'Technologische Zusatzstoffe je kg']:
                     valor_excel_normalizado = normalizar_Analytische(valor_excel) if valor_excel else ""
                     valor_web_normalizado = normalizar_Analytische(valor_web) if valor_web else ""
                 else:
@@ -241,36 +240,46 @@ def leer_todos_los_productos():
                     valor_web_normalizado = normalizar_general(valor_web) if valor_web else ""
 
                 resumen_diferencias = encontrar_diferencias(valor_excel_normalizado, valor_web_normalizado)
-                if resumen_diferencias != "No hay diferencias":
+                if resumen_diferencias != "There are no differences":
                     hay_diferencias = True
                     discrepancias_producto.append((columna, resumen_diferencias))
 
         if not hay_diferencias:
-            productos_no_coincidentes.append((nombre_producto, [("General", "No hay diferencias")]))
+            productos_no_coincidentes.append((nombre_producto, [("General", "There are no differences")]))
         else:
             productos_no_coincidentes.append((nombre_producto, discrepancias_producto))
 
     # Preparar las discrepancias para escribir en el archivo
     discrepancias_para_archivo = {}
     for producto, discrepancias in productos_no_coincidentes:
-        discrepancias_detalle = '\n'.join([
-            f"{col}:\n{dif}"  
-            for col, exc, web, dif in discrepancias if dif  #incluir solo los elementos con diferencias
-        ])
-        discrepancias_para_archivo[producto] = discrepancias_detalle
+        # Omitir productos con nombre no válido (NaN o vacío)
+        if pd.isna(producto) or producto.strip() == "":
+            continue
+
         discrepancias_detalle = []
+        detalles_procesados = set()
+
         for dis in discrepancias:
-            # Suponiendo que dis es una tupla de la forma (columna, resumen_diferencias)
-            col, dif = dis
-            if col == "General":
-                discrepancias_detalle.append(dif)  # "No hay diferencias"
+            if len(dis) == 2:
+                col, dif = dis
+            elif len(dis) == 4:
+                col, exc, web, dif = dis
             else:
-                # Ajusta aquí el formato para incluir un salto de línea antes de "En Excel:" y "En Web:"
-                partes_dif = dif.split('\n')  # Esto asume que dif ya incluye "En Excel:" y "En Web:"
-                dif_formateada = "\n".join(partes_dif)  # Re-construye la discrepancia con los saltos de línea
-                discrepancias_detalle.append(f"{col}:\n{dif_formateada}")
+                print("Error: Tuple of unexpected length.", dis)
+                continue
+
+            clave_unica = f"{col}:{dif.lower().replace(' ', '')}"
+            if clave_unica not in detalles_procesados:
+                detalles_procesados.add(clave_unica)
+                if col == "General":
+                    discrepancias_detalle.append(dif)
+                else:
+                    partes_dif = dif.split('\n')
+                    dif_formateada = "\n".join(partes_dif)
+                    discrepancias_detalle.append(f"{col}:\n{dif_formateada}")
 
         discrepancias_para_archivo[producto] = '\n'.join(discrepancias_detalle)
+   
 
     def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="Anomalias.txt"):
         ruta_escritorio = os.path.join(os.path.expanduser("~"), "Desktop")
