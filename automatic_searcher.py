@@ -83,11 +83,34 @@ def leer_todos_los_productos():
         "OKAPI Leichte Clickerlis": "okapi-leichteclickerlis",
         "OKAPI Cranberry Kekse": "okapi-cranberrykekse",
         "OKAPI Fix & Fertig Esparsette": "okapi-ffesparsette",
-        
+        'OKAPI Junior Mineral G': 'okapi-junior-mineral',
+        "OKAPI Heucobs sugar light Futterprobe": "okapi-heucobs-sugar-light",
+        "OKAPI Fix & Fertig Luzerne": "okapi-luzerne-fix-fertig",
+        "OKAPI Kieselgur Plus": "kieselgur",
+        "OKAPI Mineral Pur G Leckschale": "okapi-mineral-pur-leckschale-7-000g",
+        "OKAPI Leckschale Junior Mineral": "okapi-junior-mineral-leckschale-7-000g",
+        "OKAPI Laub & Rinden": "okapi-laub-und-rinden",
+        "OKAPI Pränat Plus Typ Z & K": "pranat-plus-typ-z-k",
+        "OKAPI Mineralbricks": "okapi-mineral-bricks",
+        "OKAPI Mineralkonzentrat G (S)": "okapi-mineralkonzentrat-g-s",
+        "OKAPI Relax": "relax",
+        "OKAPI Weidemineral Leckschale": "okapi-weidemineral-leckschale-7-000g",
+        "OKAPI Weidemineral G (S)": "okapi-weidemineral-g-s",
+        "Teepferdchen Gentle Detox": "gentle-detox",
+        "Teepferdchen Happy Belly": "happy-belly",
+        "Teepferdchen Relax Me": "relax-me",
+        "OKAPI Weidemineral Leckschale": "okapi-weidemineral-leckschale-7-000g",
+        "KNÄX Grüne Gemüse": "knaex-gruenes-gemuese",
+        "KNÄX Hirschornmehl Pur": "knaex-hirschhornmehl-pur",
+        "KNäX Fish 'n' Chips Snacks": "knaex-fish-n-chips-snacks",
+        "KNäX Käse & Ei Snacks": "knaex-kaese-ei-snacks",
         # Agrega aquí más excepciones según sea necesario
     }
     sinpagina_url = {
-        'OKAPI Entschuldigungspäckchen Wiesenkekse', 'OKAPI Esparsette Futterprobe',
+        'OKAPI Entschuldigungspäckchen Wiesenkekse', 'OKAPI Esparsette Futterprobe', 'OKAPI Fix & Fertig Esparsette Futterprobe', 'OKAPI Fix & Fertig Luzerne Futterprobe',
+        'OKAPI Heucobs sugar light', 'OKAPI Pränat Plus Typ K', 'OKAPI Pränat Plus Typ Z', 'OKAPI Ration Balancer', 'OKAPI Vierjahreszeitenfutter Fellwechsel Futterprobe',
+        'OKAPI Vierjahreszeitenfutter Frühlingsgefühle Futterprobe', 'OKAPI Vierjahreszeitenfutter Herbsttage Futterprobe', 'OKAPI Vierjahreszeitenfutter Sommerkräuter Futterprobe',
+        'OKAPI Vierjahreszeitenfutter Weidestart Futterprobe', 'OKAPI Vierjahreszeitenfutter Winterweide Futterprobe', 'OKAPI Vitalcobs Futterprobe', 'OKAPI Weihnachtskekse',
     }
     def generar_url(nombre_producto):
         # Convertir a cadena y limpiar espacios
