@@ -86,6 +86,9 @@ def leer_todos_los_productos():
         
         # Agrega aquí más excepciones según sea necesario
     }
+    sinpagina_url = {
+        'OKAPI Entschuldigungspäckchen Wiesenkekse', 'OKAPI Esparsette Futterprobe',
+    }
     def generar_url(nombre_producto):
         # Convertir a cadena y limpiar espacios
         nombre_producto = str(nombre_producto).strip()
@@ -198,9 +201,9 @@ def leer_todos_los_productos():
         # Verificar si el producto actual es el mismo que el último procesado
         if nombre_producto_actual == ultimo_producto:
             continue  # Saltear este producto
-
-        # Actualizar el nombre del último producto procesado
+        elif nombre_producto_actual in sinpagina_url:
             continue
+
         ultimo_producto = nombre_producto_actual
 
         # Aquí empiezas a trabajar con el producto actual, ya que es diferente al anterior
