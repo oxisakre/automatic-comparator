@@ -82,6 +82,7 @@ def leer_todos_los_productos():
         "OKAPI Knusprige Clickerlis": "okapi-knusprigeclickerlis",
         "OKAPI Leichte Clickerlis": "okapi-leichteclickerlis",
         "OKAPI Cranberry Kekse": "okapi-cranberrykekse",
+        "OKAPI Frühlingsknusper": "okapi-fruehlingsknusper",
         "OKAPI Fix & Fertig Esparsette": "okapi-ffesparsette",
         'OKAPI Junior Mineral G': 'okapi-junior-mineral',
         "OKAPI Heucobs sugar light Futterprobe": "okapi-heucobs-sugar-light",
@@ -104,13 +105,37 @@ def leer_todos_los_productos():
         "KNÄX Hirschornmehl Pur": "knaex-hirschhornmehl-pur",
         "KNäX Fish 'n' Chips Snacks": "knaex-fish-n-chips-snacks",
         "KNäX Käse & Ei Snacks": "knaex-kaese-ei-snacks",
+        "KNÄX GESUND DURCHS JAHR – JANUAR: Aurora": "knaex-aurora",
+        "KNÄX GESUND DURCHS JAHR – FEBRUAR: Schneeschmelze": "knaex-Schneeschmelze",
+        "KNÄX GESUND DURCHS JAHR – MÄRZ: Apport": "knaex-Apport",
+        "KNÄX GESUND DURCHS JAHR – APRIL: Alles im Fluss": "knaex-alles-im-fluss",
+        "KNÄX GESUND DURCHS JAHR – MAI: Kleine Riesen": "knaex-kleine-riesen",
+        "KNÄX GESUND DURCHS JAHR – JUNI: Heublumen": "knaex-heublumen",
+        "KNÄX GESUND DURCHS JAHR – JULI: Schäferfreund": "knaex-Schaeferfreund",
+        "KNÄX GESUND DURCHS JAHR – AUGUST: Soleil": "knaex-soleil",
+        "KNÄX GESUND DURCHS JAHR – SEPTEMBER: Altweibersommer": "knaex-altweibersommer",
+        "KNÄX GESUND DURCHS JAHR – OKTOBER: Starke Abwehr": "knaex-starke-abwehr",
+        "KNÄX GESUND DURCHS JAHR – NOVEMBER: Pfützenspaß": "knaex-pfuetzenspass",
+        "KNÄX GESUND DURCHS JAHR – DEZEMBER: Kraftquelle": "knaex-kraftquelle",
+        "Biostickies Aronia Standard": "biostickies-aronia",
+        "Biostickies Fenchel Standard": "biostickies-fenchel",
+        "Biostickies Hagebutte Standard": "biostickies-hagebutte",
+        "Biostickies Hanf Standard": "biostickies-hanf",
+        "Biostickies Mariendistel Standard": "biostickies-mariendistel",
+        "Biostickies Natur Pur Standard": "biostickies-natur-pur",
+        "Biostickies Ringelblume Standard": "biostickies-ringelblume",
+        "Biostickies Schwarzkuemmel Standard": "biostickies-schwarzkummel",
+        "Biostickies Suessholz Standard": "biostickies-sussholz",
+        "Biostickies Thymian Standard": "biostickies-thymian",
         # Agrega aquí más excepciones según sea necesario
     }
-    sinpagina_url = {
-        'OKAPI Entschuldigungspäckchen Wiesenkekse', 'OKAPI Esparsette Futterprobe', 'OKAPI Fix & Fertig Esparsette Futterprobe', 'OKAPI Fix & Fertig Luzerne Futterprobe',
+    sinpagina_url = { 
+        'OKAPI Entschuldigungspäckchen Wiesenkekse','OKAPI Esparsette Futterprobe', 'OKAPI Fix & Fertig Esparsette Futterprobe', 'OKAPI Fix & Fertig Luzerne Futterprobe',
         'OKAPI Heucobs sugar light', 'OKAPI Pränat Plus Typ K', 'OKAPI Pränat Plus Typ Z', 'OKAPI Ration Balancer', 'OKAPI Vierjahreszeitenfutter Fellwechsel Futterprobe',
         'OKAPI Vierjahreszeitenfutter Frühlingsgefühle Futterprobe', 'OKAPI Vierjahreszeitenfutter Herbsttage Futterprobe', 'OKAPI Vierjahreszeitenfutter Sommerkräuter Futterprobe',
-        'OKAPI Vierjahreszeitenfutter Weidestart Futterprobe', 'OKAPI Vierjahreszeitenfutter Winterweide Futterprobe', 'OKAPI Vitalcobs Futterprobe', 'OKAPI Weihnachtskekse',
+        'OKAPI Vierjahreszeitenfutter Weidestart Futterprobe', 'OKAPI Vierjahreszeitenfutter Winterweide Futterprobe', 'OKAPI Vitalcobs Futterprobe', 'OKAPI Weihnachtskekse','Biostickies Aronia Clickerli', 'Biostickies Fenchel Clickerli',
+        'Biostickies Hagebutte Clickerli','Biostickies Hanf Clickerli','Biostickies Mariendistel Clickerli','Biostickies Natur Pur Clickerli','Biostickies Ringelblume Clickerli','Biostickies Schwarzkuemmel Clickerli',
+        'Biostickies Suessholz Clickerli','Biostickies Thymian Clickerli','kekse big size','middle size kekse'
     }
     def generar_url(nombre_producto):
         # Convertir a cadena y limpiar espacios
@@ -127,7 +152,7 @@ def leer_todos_los_productos():
         nombre_url = urllib.parse.quote_plus(nombre_url, safe='-')
         url = f"https://www.okapi-online.de/{nombre_url}.html"
         return url
-    def extraer_descripciones(url, driver):
+    def extraer_descripciones_generales(url, driver):
         try:
             driver.get(url)
             # Espera hasta que se cargue el contenido dinámico, ajusta los selectores y tiempos según sea necesario
@@ -139,6 +164,61 @@ def leer_todos_los_productos():
                 key = h3.text.strip()
                 value = h3.find_element(By.XPATH, 'following-sibling::p').text.strip() if h3.find_element(By.XPATH, 'following-sibling::p') else ''
                 descripciones[key] = value
+            return descripciones
+        except Exception as e:
+            print(f"Error extracting from {url}: {e}")
+        return {}
+    def extraer_descripciones_biostickies(url, driver):
+        try:
+            from bs4 import BeautifulSoup
+
+            driver.get(url)
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "h4.overline-header"))
+            )
+            descripciones = {}
+            html_content = driver.page_source
+            soup = BeautifulSoup(html_content, 'html.parser')
+            headers = soup.select("h4.overline-header")
+
+            for header in headers:
+                key = header.get_text(strip=True)
+                value = ''
+                # Recorrer los nodos siguientes hasta encontrar el próximo encabezado o llegar al final del contenedor.
+                for sibling in header.next_siblings:
+                    if sibling.name == 'h4':
+                        # Si encontramos otro encabezado, detenemos la búsqueda.
+                        break
+                    if sibling.name == 'br':
+                        # Si encontramos un <br>, continuamos, ya que el texto relevante podría estar después.
+                        continue
+                    if sibling.name is None:
+                        # Esto significa que es un nodo de texto y no una etiqueta.
+                        value += sibling.strip()
+                descripciones[key] = value
+
+            return descripciones
+        except Exception as e:
+            print(f"Error extracting from {url}: {e}")
+        return {}
+    def extraer_descripciones_excepciones(url, driver):
+        try:
+            driver.get(url)
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, ".product.attribute.description"))
+            )
+            descripciones = {}
+            # Asumiendo que todas las descripciones que necesitas están bajo la clase "product.attribute.description"
+            contenedores = driver.find_elements(By.CSS_SELECTOR, ".product.attribute.description")
+            for contenedor in contenedores:
+                # Encontrar h3 dentro del contenedor actual y luego el párrafo o div que sigue.
+                elementos = contenedor.find_elements(By.CSS_SELECTOR, "h3.overline-header + p, h3.overline-header + div.value")
+                for elemento in elementos:
+                    # El texto del h3 es la clave.
+                    key = elemento.find_element(By.XPATH, "./preceding-sibling::h3[1]").text.strip()
+                    # El texto contenido en el p o div siguiente es el valor.
+                    value = elemento.text.strip()
+                    descripciones[key] = value
             return descripciones
         except Exception as e:
             print(f"Error extracting from {url}: {e}")
@@ -226,13 +306,24 @@ def leer_todos_los_productos():
             continue  # Saltear este producto
         elif nombre_producto_actual in sinpagina_url:
             continue
+        elif nombre_producto_actual == 'nan':
+            continue
 
         ultimo_producto = nombre_producto_actual
 
         # Aquí empiezas a trabajar con el producto actual, ya que es diferente al anterior
         nombre_producto = row['Artikelname Deutsch']
         url_producto = generar_url(nombre_producto)
-        descripciones_web = extraer_descripciones(url_producto, driver)
+        excepciones = ['lapachorinde', 'prodarm','frühlingsknusper', 'tuttifrutti','winterknusper',]
+        if any(exc in nombre_producto_actual.lower() for exc in excepciones):
+            # Llama a la función especializada para excepciones
+            descripciones_web = extraer_descripciones_excepciones(url_producto, driver)
+        elif 'biostickies' in nombre_producto_actual.lower():
+            # Llama a la función especializada para 'biostickies'
+            descripciones_web = extraer_descripciones_biostickies(url_producto, driver)
+        else:
+            # Llama a la función de extracción original para otros productos
+            descripciones_web = extraer_descripciones_generales(url_producto, driver)
         discrepancias_producto = []
         hay_diferencias = False
 
