@@ -25,40 +25,7 @@ def seleccionar_archivo_excel():
     )
     root.destroy()  # Cerrar la ventana de Tkinter
     return file_path
-def buscar_un_producto():
-    nombre_del_producto = input("Enter the product name: ")
-    service = ChromeService(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service)
-    
-    # Formatear el nombre del producto para crear la URL
-    nombre_producto_formateado = nombre_del_producto.lower().replace(' ', '-')
-    url_producto = f"https://www.okapi-online.de/{nombre_producto_formateado}.html"
-    # Abrir la URL del producto
-    driver.get(url_producto)
-    # Esperar a que el contenido dinámico se cargue y extraer la información
-    try:
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "div.product.attribute.description"))
-        )
-        # Encuentra todos los elementos h3 dentro del div con clase 'product attribute description'
-        titulos = driver.find_elements(By.CSS_SELECTOR, "div.product.attribute.description h3.overline-header")
-        # Crear un diccionario para almacenar la información
-        informacion_producto = {}
-        # Iterar sobre los elementos h3 y obtener la información
-        for titulo in titulos:
-            key = titulo.text.strip()
-            # Intentar encontrar el siguiente elemento p después del título
-            value_element = titulo.find_element(By.XPATH, "./following-sibling::p[1]")
-            value = value_element.text.strip() if value_element else ''
-            informacion_producto[key] = value
-        # Imprimir toda la información
-        for key, value in informacion_producto.items():
-            print(f"{key}: {value}")
-    except TimeoutException as e:
-        print("You timed out when searching for the product:", e)
-    finally:
-        driver.quit()
-    return informacion_producto
+
 def leer_todos_los_productos():
     
     chrome_options = Options()
@@ -408,21 +375,7 @@ def leer_todos_los_productos():
     escribir_discrepancias_a_archivo(discrepancias_para_archivo)
     print("The discrepancies have been written to the 'Anomalies.txt' file on the desktop.")   
 def main():
-    
-    while True:
-        print("Choose an option:")
-        print("1. View a product description")
-        print("2. Read all products")
-        print("3. Exit")
-        opcion = input("Enter the number of the desired option:")
-        if opcion == '1':
-            buscar_un_producto()
-        elif opcion == '2':
-            print('The program is running... Please wait')
-            leer_todos_los_productos()
-        elif opcion == '3':
-            break
-        else:
-            print("Invalid option, please try again.")
-if __name__ == "__main__":
-    main()
+    print('The program is running... Please wait')
+    leer_todos_los_productos()
+        
+main()
