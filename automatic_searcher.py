@@ -373,7 +373,8 @@ def leer_todos_los_productos():
                 archivo.write(f"Producto: {producto}\n{detalle}\n\n")
     # Llama a la función para escribir las discrepancias
     escribir_discrepancias_a_archivo(discrepancias_para_archivo)
-    print("The discrepancies have been written to the 'Anomalies.txt' file on the desktop.")   
+    print("The discrepancies have been written to the 'Anomalies.txt' file on the desktop.")
+    input("Press any key to continue...")   
 def main():
     print('The program is running... Please wait')
     leer_todos_los_productos()
