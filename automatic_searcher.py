@@ -170,28 +170,41 @@ def leer_todos_los_productos():
         return {}
     def extraer_descripciones_excepciones(url, driver):
         try:
+            from bs4 import BeautifulSoup
+
             driver.get(url)
             WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".product.attribute.description"))
+                EC.presence_of_element_located((By.CSS_SELECTOR, "h3.overline-header"))
             )
             descripciones = {}
-            # Asumiendo que todas las descripciones que necesitas están bajo la clase "product.attribute.description"
-            contenedores = driver.find_elements(By.CSS_SELECTOR, ".product.attribute.description")
-            for contenedor in contenedores:
-                # Encontrar h3 dentro del contenedor actual y luego el párrafo o div que sigue.
-                elementos = contenedor.find_elements(By.CSS_SELECTOR, "h3.overline-header + p, h3.overline-header + div.value")
-                for elemento in elementos:
-                    # El texto del h3 es la clave.
-                    key = elemento.find_element(By.XPATH, "./preceding-sibling::h3[1]").text.strip()
-                    # El texto contenido en el p o div siguiente es el valor.
-                    value = elemento.text.strip()
-                    descripciones[key] = value
+            html_content = driver.page_source
+            soup = BeautifulSoup(html_content, 'html.parser')
+            headers = soup.select("h3.overline-header")
+
+            for header in headers:
+                key = header.get_text(strip=True)
+                value = ''
+                # Recorrer los nodos siguientes hasta encontrar el próximo encabezado o llegar al final del contenedor.
+                for sibling in header.next_siblings:
+                    
+                    if sibling.name == 'h3':
+                        # Si encontramos otro encabezado, detenemos la búsqueda.
+                        break
+                    if sibling.name != 'br':
+                        # Si encontramos un <br>, continuamos, ya que el texto relevante podría estar después.
+                        value = ' '.join([x for x in sibling.stripped_strings])
+                        if value != '':
+                            break
+                        
+                descripciones[key] = value
+
             return descripciones
         except Exception as e:
             print(f"Error extracting from {url}: {e}")
         return {}
     
     file_path = seleccionar_archivo_excel()
+    
     if not file_path:
         print("No file was selected.")
         return
