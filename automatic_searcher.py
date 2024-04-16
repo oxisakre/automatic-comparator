@@ -121,16 +121,34 @@ def leer_todos_los_productos():
         return url
     def extraer_descripciones_generales(url, driver):
         try:
+            from bs4 import BeautifulSoup
+
             driver.get(url)
-            # Espera hasta que se cargue el contenido dinámico, ajusta los selectores y tiempos según sea necesario
             WebDriverWait(driver, 10).until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR, 'h3.overline-header'))
+                EC.presence_of_element_located((By.CSS_SELECTOR, "h3.overline-header"))
             )
             descripciones = {}
-            for h3 in driver.find_elements(By.CSS_SELECTOR, 'h3.overline-header'):
-                key = h3.text.strip()
-                value = h3.find_element(By.XPATH, 'following-sibling::p').text.strip() if h3.find_element(By.XPATH, 'following-sibling::p') else ''
+            html_content = driver.page_source
+            soup = BeautifulSoup(html_content, 'html.parser')
+            headers = soup.select("h3.overline-header")
+
+            for header in headers:
+                key = header.get_text(strip=True)
+                value = ''
+                # Recorrer los nodos siguientes hasta encontrar el próximo encabezado o llegar al final del contenedor.
+                for sibling in header.next_siblings:
+                    
+                    if sibling.name == 'h3':
+                        # Si encontramos otro encabezado, detenemos la búsqueda.
+                        break
+                    if sibling.name != 'br':
+                        # Si encontramos un <br>, continuamos, ya que el texto relevante podría estar después.
+                        value = ' '.join([x for x in sibling.stripped_strings])
+                        if value != '':
+                            break
+                        
                 descripciones[key] = value
+
             return descripciones
         except Exception as e:
             print(f"Error extracting from {url}: {e}")
@@ -153,21 +171,23 @@ def leer_todos_los_productos():
                 value = ''
                 # Recorrer los nodos siguientes hasta encontrar el próximo encabezado o llegar al final del contenedor.
                 for sibling in header.next_siblings:
+                    
                     if sibling.name == 'h4':
                         # Si encontramos otro encabezado, detenemos la búsqueda.
                         break
-                    if sibling.name == 'br':
+                    if sibling.name != 'br':
                         # Si encontramos un <br>, continuamos, ya que el texto relevante podría estar después.
-                        continue
-                    if sibling.name is None:
-                        # Esto significa que es un nodo de texto y no una etiqueta.
-                        value += sibling.strip()
+                        value = ' '.join([x for x in sibling.stripped_strings])
+                        if value != '':
+                            break
+                        
                 descripciones[key] = value
 
             return descripciones
         except Exception as e:
             print(f"Error extracting from {url}: {e}")
         return {}
+        
     def extraer_descripciones_excepciones(url, driver):
         try:
             from bs4 import BeautifulSoup
