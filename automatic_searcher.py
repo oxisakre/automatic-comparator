@@ -187,41 +187,6 @@ def leer_todos_los_productos():
         except Exception as e:
             print(f"Error extracting from {url}: {e}")
         return {}
-        
-    def extraer_descripciones_excepciones(url, driver):
-        try:
-            from bs4 import BeautifulSoup
-
-            driver.get(url)
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "h3.overline-header"))
-            )
-            descripciones = {}
-            html_content = driver.page_source
-            soup = BeautifulSoup(html_content, 'html.parser')
-            headers = soup.select("h3.overline-header")
-
-            for header in headers:
-                key = header.get_text(strip=True)
-                value = ''
-                # Recorrer los nodos siguientes hasta encontrar el próximo encabezado o llegar al final del contenedor.
-                for sibling in header.next_siblings:
-                    
-                    if sibling.name == 'h3':
-                        # Si encontramos otro encabezado, detenemos la búsqueda.
-                        break
-                    if sibling.name != 'br':
-                        # Si encontramos un <br>, continuamos, ya que el texto relevante podría estar después.
-                        value = ' '.join([x for x in sibling.stripped_strings])
-                        if value != '':
-                            break
-                        
-                descripciones[key] = value
-
-            return descripciones
-        except Exception as e:
-            print(f"Error extracting from {url}: {e}")
-        return {}
     
     file_path = seleccionar_archivo_excel()
     
@@ -314,11 +279,8 @@ def leer_todos_los_productos():
         # Aquí empiezas a trabajar con el producto actual, ya que es diferente al anterior
         nombre_producto = row['Artikelname Deutsch']
         url_producto = generar_url(nombre_producto)
-        excepciones = ['lapachorinde', 'prodarm','frühlingsknusper', 'tuttifrutti','winterknusper',]
-        if any(exc in nombre_producto_actual.lower() for exc in excepciones):
-            # Llama a la función especializada para excepciones
-            descripciones_web = extraer_descripciones_excepciones(url_producto, driver)
-        elif 'biostickies' in nombre_producto_actual.lower():
+        
+        if 'biostickies' in nombre_producto_actual.lower():
             # Llama a la función especializada para 'biostickies'
             descripciones_web = extraer_descripciones_biostickies(url_producto, driver)
         else:
