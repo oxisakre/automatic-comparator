@@ -291,9 +291,10 @@ def leer_todos_los_productos():
 
         for columna in columnas_a_verificar:
             if columna in df.columns:
+                print(row[columna])
+                print(pd.isna(row[columna]))
                 valor_excel = str(row[columna]).strip() if pd.notnull(row[columna]) else None
                 nombre_web_equivalente = mapeo_nombres.get(columna, columna)  # Usar mapeo o el mismo nombre si no hay mapeo
-                nombre_web_equivalente = mapeo_nombres.get(columna, columna)
                 valor_web = descripciones_web.get(nombre_web_equivalente, '').strip()
 
                 if valor_excel is not None and valor_web is not None:
@@ -369,7 +370,7 @@ def leer_todos_los_productos():
     # Llama a la función para escribir las discrepancias
     escribir_discrepancias_a_archivo(discrepancias_para_archivo)
     print("The discrepancies have been written to the 'Anomalies.txt' file on the desktop.")
-    input("Press any key to continue...")   
+    input("Press 'Enter' to close program...")   
 def main():
     print('The program is running... Please wait')
     leer_todos_los_productos()
