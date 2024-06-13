@@ -109,8 +109,10 @@ def leer_todos_los_productos():
         nombre_producto = str(nombre_producto).strip()
         nombre_url = ""
         # Verificar si el producto está en el diccionario de excepciones
-        if nombre_producto in excepciones_url:
-            nombre_url = excepciones_url[nombre_producto]
+        excepciones_urls = {k.lower(): v for k, v in excepciones_url.items()}
+        nombre_producto_lower = nombre_producto.lower()
+        if nombre_producto_lower in excepciones_urls:
+            nombre_url = excepciones_urls[nombre_producto_lower]
         else:
             # Procesamiento estándar si no es una excepción
             nombre_url = nombre_producto.lower().replace(" ", "-").replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
@@ -277,8 +279,8 @@ def leer_todos_los_productos():
         ultimo_producto = nombre_producto_actual
 
         # Aquí empiezas a trabajar con el producto actual, ya que es diferente al anterior
-        nombre_producto = row['Artikelname Deutsch']
-        url_producto = generar_url(nombre_producto)
+        
+        url_producto = generar_url(nombre_producto_actual)
         
         if 'biostickies' in nombre_producto_actual.lower():
             # Llama a la función especializada para 'biostickies'
@@ -325,9 +327,9 @@ def leer_todos_los_productos():
                     discrepancias_producto.append((columna, resumen_diferencias))
 
         if not hay_diferencias:
-            productos_no_coincidentes.append((nombre_producto, [("General", "There are no differences")]))
+            productos_no_coincidentes.append((nombre_producto_actual, [("General", "There are no differences")]))
         else:
-            productos_no_coincidentes.append((nombre_producto, discrepancias_producto))
+            productos_no_coincidentes.append((nombre_producto_actual, discrepancias_producto))
 
     # Preparar las discrepancias para escribir en el archivo
     discrepancias_para_archivo = {}
