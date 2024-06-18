@@ -1,0 +1,311 @@
+import json
+import difflib
+import pandas as pd
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
+import urllib.parse
+import os
+import tkinter as tk
+from tkinter import filedialog
+from bs4 import BeautifulSoup, Comment
+
+def seleccionar_archivo_excel():
+    root = tk.Tk()
+    root.withdraw()
+    root.update()
+    file_path = filedialog.askopenfilename(
+        title="Select the Excel file",
+        filetypes=[("Excel files", "*.xlsx")]
+    )
+    root.destroy()
+    return file_path
+
+def leer_excepciones_json(file_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        excepciones = json.load(f)
+    return excepciones['excepciones_url'], set(excepciones['sinpagina_url'])
+
+def encontrar_diferencias(texto_excel, texto_web):
+    texto_excel_limpio = ' '.join(texto_excel.split())
+    texto_web_limpio = ' '.join(texto_web.split())
+    
+    d = difflib.Differ()
+    diferencias = list(d.compare(texto_excel_limpio.split(), texto_web_limpio.split()))
+    
+    diferencias_filtradas_excel = []
+    diferencias_filtradas_web = []
+    
+    for line in diferencias:
+        if line.startswith('- '):
+            diferencias_filtradas_excel.append(line[2:])
+        elif line.startswith('+ '):
+            diferencias_filtradas_web.append(line[2:])
+    
+    if not diferencias_filtradas_excel and not diferencias_filtradas_web:
+        return "There are no differences"
+    else:
+        diferencias_texto_excel = ' '.join(diferencias_filtradas_excel)
+        diferencias_texto_web = ' '.join(diferencias_filtradas_web)
+        
+        resultado = ""
+        if diferencias_texto_excel:
+            resultado += f"In Excel: {diferencias_texto_excel}\n"
+        if diferencias_texto_web:
+            resultado += f"In Web: {diferencias_texto_web}\n"
+        return resultado.strip()
+
+def leer_todos_los_productos():
+    chrome_options = Options()
+    chrome_options = webdriver.ChromeOptions()
+    service = ChromeService(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    
+    mapeo_nombres = {
+        'Fütterungshinweis': 'Fütterungshinweis',
+        'Fütterungsempfehlung': 'Fütterungsempfehlung',
+        'Zusammensetzung': 'Zusammensetzung',
+        'Ernährungsphysiologische Zusatzstoffe je kg': 'Zusatzstoffe',
+        'Technologische Zusatzstoffe je kg': 'Zusatzstoffe',
+        'Analytische Bestandteile und Gehalte': 'Analytische Bestandteile und Gehalte',
+        'Lagerungshinweis': 'Lagerungshinweis',
+        'Rohfaser': 'Rohfaser',
+        'Rohprotein': 'Rohprotein',
+        'Rohfett': 'Rohfett',
+        'Rohasche': 'Rohasche',
+        'Calcium': 'Calcium',
+        'Phosphor': 'Phosphor',
+        'Natrium': 'Natrium',
+        'Magnesium': 'Magnesium',
+        'Kalium': 'Kalium',
+        'Chlorid': 'Chlorid',
+        'Zucker': 'Zucker',
+        'Fruktan': 'Fruktan',
+        'Lysin': 'Lysin',
+        'Methionin': 'Methionin',
+        'Threonin': 'Threonin',
+        'Schwefel': 'Schwefel',
+        'Stärke': 'Stärke',
+        'Feuchtigkeit': 'Feuchtigkeit'
+    }
+    
+    excepciones_url, sinpagina_url = leer_excepciones_json('excepciones.json')
+    
+    def generar_url(nombre_producto):
+        nombre_producto = str(nombre_producto).strip()
+        nombre_url = ""
+        excepciones_urls = {k.lower(): v for k, v in excepciones_url.items()}
+        nombre_producto_lower = nombre_producto.lower()
+        if nombre_producto_lower in excepciones_urls:
+            nombre_url = excepciones_urls[nombre_producto_lower]
+        else:
+            nombre_url = nombre_producto.lower().replace(" ", "-").replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+            nombre_url = nombre_url.rstrip('-')
+        
+        nombre_url = urllib.parse.quote_plus(nombre_url, safe='-')
+        url = f"https://www.okapi-online.de/{nombre_url}.html"
+        return url
+
+    def extraer_descripciones_generales(url, driver):
+        try:
+            driver.get(url)
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "h3.overline-header"))
+            )
+            descripciones = {}
+            html_content = driver.page_source
+            soup = BeautifulSoup(html_content, 'html.parser')
+            headers = soup.select("h3.overline-header")
+
+            for header in headers:
+                key = header.get_text(strip=True)
+                value = []
+                for sibling in header.next_siblings:
+                    if sibling.name == 'h3':
+                        break
+                    if sibling.name not in ['br', 'style'] and not isinstance(sibling, Comment):
+                        value.append(' '.join(sibling.stripped_strings))
+                descripciones[key] = ' '.join(value).strip()
+
+            return descripciones
+        except Exception as e:
+            print(f"Error extracting from {url}: {e}")
+        return {}
+
+    def extraer_descripciones_biostickies(url, driver):
+        try:
+            driver.get(url)
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "h4.overline-header"))
+            )
+            descripciones = {}
+            html_content = driver.page_source
+            soup = BeautifulSoup(html_content, 'html.parser')
+            headers = soup.select("h4.overline-header")
+
+            for header in headers:
+                key = header.get_text(strip=True)
+                value = []
+                for sibling in header.next_siblings:
+                    if sibling.name == 'h4':
+                        break
+                    if sibling.name not in ['br', 'style'] and not isinstance(sibling, Comment):
+                        value.append(' '.join(sibling.stripped_strings))
+                descripciones[key] = ' '.join(value).strip()
+
+            return descripciones
+        except Exception as e:
+            print(f"Error extracting from {url}: {e}")
+        return {}
+    
+    file_path = seleccionar_archivo_excel()
+    
+    if not file_path:
+        print("No file was selected.")
+        return
+    df = pd.read_excel(file_path)
+
+    # Renombrar las columnas del DataFrame para eliminar los ':'
+    df.rename(columns=lambda x: x.rstrip(':').strip(), inplace=True)
+
+    productos_no_coincidentes = []
+    ultimo_producto = None 
+    columnas_a_verificar = [
+        'Fütterungshinweis', 'Fütterungsempfehlung', 'Zusammensetzung',
+        'Ernährungsphysiologische Zusatzstoffe je kg', 'Technologische Zusatzstoffe je kg',
+        'Analytische Bestandteile und Gehalte', 'Lagerungshinweis',
+        'Rohfaser', 'Rohprotein', 'Rohfett', 'Rohasche', 'Calcium', 'Phosphor', 'Natrium',
+        'Magnesium', 'Kalium', 'Chlorid', 'Zucker', 'Fruktan', 'Lysin', 'Methionin', 'Threonin', 'Schwefel', 'Stärke', 'Feuchtigkeit'
+    ]
+    
+    productos_no_coincidentes = []
+    ultimo_producto = None 
+    for index, row in df.iterrows():
+        nombre_producto_actual = str(row['Artikelname Deutsch']).strip()
+
+        if nombre_producto_actual == ultimo_producto:
+            continue
+        elif nombre_producto_actual in sinpagina_url:
+            continue
+        elif nombre_producto_actual == 'nan':
+            continue
+
+        ultimo_producto = nombre_producto_actual
+
+        url_producto = generar_url(nombre_producto_actual)
+        
+        if 'biostickies' in nombre_producto_actual.lower():
+            descripciones_web = extraer_descripciones_biostickies(url_producto, driver)
+        else:
+            descripciones_web = extraer_descripciones_generales(url_producto, driver)
+        discrepancias_producto = []
+        hay_diferencias = False
+
+        valores_analiticos_excel = []
+        for columna in ['Rohfaser', 'Rohprotein', 'Rohfett', 'Rohasche', 'Calcium', 'Phosphor', 'Natrium', 
+                        'Magnesium', 'Kalium', 'Chlorid', 'Zucker', 'Fruktan', 'Lysin', 'Methionin', 
+                        'Threonin', 'Schwefel', 'Stärke', 'Feuchtigkeit']:
+            if columna in df.columns and pd.notnull(row[columna]):
+                valor = str(row[columna]).strip()
+                if '.' in valor:
+                    valor_float = float(valor)
+                    valor = f"{valor_float * 100:.3f}".rstrip('0').rstrip('.') + '%'
+                    valores_analiticos_excel.append(f"{columna}: {valor}")
+
+        valor_excel_analitico = ' '.join(valores_analiticos_excel).strip()
+        valor_web_analitico = descripciones_web.get('Analytische Bestandteile und Gehalte', '').replace('\n', ' ').strip()
+
+        # Separar el "Lagerungshinweis" si está incluido en "Analytische Bestandteile und Gehalte"
+        valor_web_analitico, *lagerungshinweis = valor_web_analitico.split("Ergänzungsfuttermittel für Pferde.")
+        valor_web_analitico = valor_web_analitico.strip()
+        if lagerungshinweis:
+            lagerungshinweis = " ".join(lagerungshinweis).strip()
+        else:
+            lagerungshinweis = ""
+
+        if valor_excel_analitico != valor_web_analitico:
+            hay_diferencias = True
+            resumen_diferencias = encontrar_diferencias(valor_excel_analitico, valor_web_analitico)
+            discrepancias_producto.append(('Analytische Bestandteile und Gehalte', resumen_diferencias))
+
+        # Verificación específica para "Lagerungshinweis"
+        if 'Lagerungshinweis' in df.columns:
+            valor_excel_lagerung = str(row['Lagerungshinweis']).strip() if pd.notnull(row['Lagerungshinweis']) else None
+            # Ignorar la frase "Ergänzungsfuttermittel für Pferde"
+            valor_web_lagerung = lagerungshinweis.replace("Ergänzungsfuttermittel für Pferde", "").strip()
+
+            if valor_excel_lagerung and valor_web_lagerung:
+                if valor_excel_lagerung != valor_web_lagerung:
+                    hay_diferencias = True
+                    resumen_diferencias = encontrar_diferencias(valor_excel_lagerung, valor_web_lagerung)
+                    discrepancias_producto.append(('Lagerungshinweis', resumen_diferencias))
+        
+        for columna in columnas_a_verificar:
+            if columna in df.columns and columna not in ['Rohfaser', 'Rohprotein', 'Rohfett', 'Rohasche', 'Calcium', 'Phosphor', 'Natrium', 
+                                                        'Magnesium', 'Kalium', 'Chlorid', 'Zucker', 'Fruktan', 'Lysin', 'Methionin', 
+                                                        'Threonin', 'Schwefel', 'Stärke', 'Feuchtigkeit', 'Lagerungshinweis']:
+                valor_excel = str(row[columna]).strip() if pd.notnull(row[columna]) else None
+                nombre_web_equivalente = mapeo_nombres.get(columna, columna)
+                valor_web = descripciones_web.get(nombre_web_equivalente, '').strip()
+
+                if valor_excel is not None and valor_web is not None:
+                    if valor_excel != valor_web:
+                        hay_diferencias = True
+                        resumen_diferencias = encontrar_diferencias(valor_excel, valor_web)
+                        discrepancias_producto.append((columna, resumen_diferencias))
+                        
+
+        if not hay_diferencias:
+            productos_no_coincidentes.append((nombre_producto_actual, [("General", "There are no differences")]))
+        else:
+            productos_no_coincidentes.append((nombre_producto_actual, discrepancias_producto))
+
+    discrepancias_para_archivo = {}
+    for producto, discrepancias in productos_no_coincidentes:
+        if pd.isna(producto) or producto.strip() == "":
+            continue
+
+        discrepancias_detalle = []
+        detalles_procesados = set()
+
+        for dis in discrepancias:
+            if len(dis) == 2:
+                col, dif = dis
+            elif len(dis) == 4:
+                col, exc, web, dif = dis
+            else:
+                print("Error: Tuple of unexpected length.", dis)
+                continue
+
+            clave_unica = f"{col}:{dif.lower().replace(' ', '')}"
+            if clave_unica not in detalles_procesados:
+                detalles_procesados.add(clave_unica)
+                if col == "General":
+                    discrepancias_detalle.append(dif)
+                else:
+                    partes_dif = dif.split('\n')
+                    dif_formateada = "\n".join(partes_dif)
+                    discrepancias_detalle.append(f"{col}:\n{dif_formateada}")
+
+        discrepancias_para_archivo[producto] = '\n'.join(discrepancias_detalle)
+
+    def escribir_discrepancias_a_archivo(discrepancias, nombre_archivo="Anomalies.txt"):
+        ruta_escritorio = os.path.join(os.path.expanduser("~"), "Desktop")
+        ruta_completa = os.path.join(ruta_escritorio, nombre_archivo)
+        with open(ruta_completa, "w", encoding="utf-8") as archivo:
+            for producto, detalle in discrepancias.items():
+                archivo.write(f"Producto: {producto}\n{detalle}\n\n")
+                
+    escribir_discrepancias_a_archivo(discrepancias_para_archivo)
+    print("The discrepancies have been written to the 'Anomalies.txt' file on the desktop.")
+    input("Press 'Enter' to close program...")      
+
+def main():
+    print('The program is running.... Please wait')
+    leer_todos_los_productos()
+        
+main()

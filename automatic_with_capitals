@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 import urllib.parse
 import os
+import sys
 import tkinter as tk
 from tkinter import filedialog
 from bs4 import BeautifulSoup, Comment
@@ -24,6 +25,16 @@ def seleccionar_archivo_excel():
     )
     root.destroy()
     return file_path
+
+def resource_path(relative_path):
+    """ Obtener el recurso desde el ejecutable o del directorio de desarrollo """
+    try:
+        # PyInstaller crea una carpeta temporal y almacena el camino en _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 def leer_excepciones_json(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
